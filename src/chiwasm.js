@@ -21,8 +21,8 @@ const Chiwasm = (function() {
   }
 
   class MemoryManager {
-    constructor(memory) {
-      this.utf8 = new Utf8Converter()
+    constructor(memory, utf8Converter) {
+      this.utf8 = utf8Converter
       this.memory = memory
       this.array = new Uint8Array(memory.buffer)
     }
@@ -59,37 +59,58 @@ const Chiwasm = (function() {
 
   }
 
+  class Attributes {
+    constructor(element) {
+      this.element = element
+    }
+
+    get modulePath() {
+      return this.fetchAttribute('wasm')
+    }
+
+    get memoryGroup() {
+      return this.fetchAttribute('memoryGroup', 'env')
+    }
+
+    get memoryName() {
+      return this.fetchAttribute('memoryName', 'memory')
+    }
+
+    get memorySize() {
+      return Number(this.fetchAttribute('memorySize', '1'))
+    }
+
+    fetchAttribute(name, defaultValue) {
+      let value = this.element.getAttribute(name)
+      return value === null ? defaultValue : value
+    }
+
+  }
+
   class ChiwasmComponent extends HTMLElement {
     constructor() {
       super()
+      this.buildObjectGraph()
     }
 
     connectedCallback() {
-      console.log('connectedCallback');
-
-      this.memory = new WebAssembly.Memory({ initial: this.fetchMemorySize() })
-      this.memoryManager = new MemoryManager(this.memory)
-
-      let path = this.fetchModulePath()
+      console.log('connectedCallback')
       let imports = this.fetchImports()
-      this.instantiateModule(path, imports)
+      this.instantiateModule(this.attrs.modulePath, imports)
     }
 
-    fetchModulePath() { return this.fetchAttribute('wasm') }
-    fetchMemoryGroup() { return this.fetchAttribute('memoryGroup', 'env') }
-    fetchMemoryName() { return this.fetchAttribute('memoryName', 'memory') }
-    fetchMemorySize() { return Number(this.fetchAttribute('memorySize', '1')) }
-
-    fetchAttribute(name, defaultValue) {
-      let value = this.getAttribute(name)
-      return value === null ? defaultValue : value
+    buildObjectGraph() {
+      this.attrs = new Attributes(this)
+      this.memory = new WebAssembly.Memory({ initial: this.attrs.memorySize })
+      this.utf8 = new Utf8Converter()
+      this.memoryManager = new MemoryManager(this.memory, this.utf8)
     }
 
     fetchImports() {
       let imports = {}
 
-      imports[this.fetchMemoryGroup()] = imports[this.fetchMemoryGroup()] || {}
-      imports[this.fetchMemoryGroup()][this.fetchMemoryName()] = this.memory
+      imports[this.attrs.memoryGroup] = imports[this.attrs.memoryGroup] || {}
+      imports[this.attrs.memoryGroup][this.attrs.memoryName] = this.memory
 
       imports.env = imports.env || {}
       imports.env.readByte = (address) => this.memoryManager.readByte(address),
