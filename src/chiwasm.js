@@ -1,30 +1,51 @@
 const Chiwasm = (function() {
 
-  class Utf8Converter {
+  class Component extends HTMLElement {
     constructor() {
-      this.decoder = new TextDecoder("utf8")
-      this.encoder = new TextEncoder()
+      super()
     }
 
-    bytesToString(bytes) {
-      let index = bytes.indexOf(0)
-      let array = index === -1 ? bytes : bytes.slice(0, index)
-      return this.decoder.decode(new Uint8Array(array))
+    connectedCallback() {
+      let size = this.memorySize
+      let group = this.memoryGroup
+      let name = this.memoryName
+      let path = this.modulePath
+
+      let memory = new Memory(size, group, name)
+      this.module = new Module(path, memory)
     }
 
-    stringToBytes(string) {
-      let array = Array.from(this.encoder.encode(string))
-      array.push(0)
-      return new Uint8Array(array)
+    get modulePath() {
+      return this.fetchAttribute('wasm')
+    }
+
+    get memoryGroup() {
+      return this.fetchAttribute('memoryGroup', 'env')
+    }
+
+    get memoryName() {
+      return this.fetchAttribute('memoryName', 'memory')
+    }
+
+    get memorySize() {
+      return Number(this.fetchAttribute('memorySize', '1'))
+    }
+
+    fetchAttribute(name, defaultValue) {
+      let value = this.getAttribute(name)
+      return value === null ? defaultValue : value
     }
 
   }
 
-  class MemoryManager {
-    constructor(memory, utf8Converter) {
-      this.utf8 = utf8Converter
-      this.memory = memory
-      this.array = new Uint8Array(memory.buffer)
+  class Memory {
+    constructor(size, group, name) {
+      this.group = group
+      this.name = name
+
+      this.utf8 = new Utf8Converter()
+      this.memory = new WebAssembly.Memory({ initial: size })
+      this.array = new Uint8Array(this.memory.buffer)
     }
 
     writeByte(address, byte) {
@@ -57,67 +78,29 @@ const Chiwasm = (function() {
       this.writeByte(currentAddress, 0)
     }
 
-  }
-
-  class Attributes {
-    constructor(element) {
-      this.element = element
-    }
-
-    get modulePath() {
-      return this.fetchAttribute('wasm')
-    }
-
-    get memoryGroup() {
-      return this.fetchAttribute('memoryGroup', 'env')
-    }
-
-    get memoryName() {
-      return this.fetchAttribute('memoryName', 'memory')
-    }
-
-    get memorySize() {
-      return Number(this.fetchAttribute('memorySize', '1'))
-    }
-
-    fetchAttribute(name, defaultValue) {
-      let value = this.element.getAttribute(name)
-      return value === null ? defaultValue : value
+    addToImports(imports) {
+      imports[this.group] = imports[this.group] || {}
+      imports[this.group][this.name] = this.memory
+      return imports
     }
 
   }
 
-  class ChiwasmComponent extends HTMLElement {
-    constructor() {
-      super()
-      this.buildObjectGraph()
-    }
-
-    connectedCallback() {
-      console.log('connectedCallback')
-      let imports = this.fetchImports()
-      this.instantiateModule(this.attrs.modulePath, imports)
-    }
-
-    buildObjectGraph() {
-      this.attrs = new Attributes(this)
-      this.memory = new WebAssembly.Memory({ initial: this.attrs.memorySize })
-      this.utf8 = new Utf8Converter()
-      this.memoryManager = new MemoryManager(this.memory, this.utf8)
+  class Module {
+    constructor(path, memory) {
+      this.memory = memory
+      this.instantiateModule(path, this.fetchImports())
     }
 
     fetchImports() {
       let imports = {}
 
-      imports[this.attrs.memoryGroup] = imports[this.attrs.memoryGroup] || {}
-      imports[this.attrs.memoryGroup][this.attrs.memoryName] = this.memory
+      imports = this.memory.addToImports(imports)
 
       imports.env = imports.env || {}
-      imports.env.readByte = (address) => this.memoryManager.readByte(address),
-      imports.env.writeByte = (address, byte) => this.memoryManager.writeByte(address, byte),
-      imports.env.log = (s) => this.log(s),
-      imports.env.setText = (element, value) => this.setText(element, value),
-      imports.env.getText = (element, value) => this.getText(element, value),
+      imports.env.log = (s) => this.log(s)
+      imports.env.setText = (element, value) => this.setText(element, value)
+      imports.env.getText = (element, value) => this.getText(element, value)
       imports.env.addEventListener = (element, event, callback) => this.addEventListener(element, event, callback)
 
       return imports
@@ -135,27 +118,27 @@ const Chiwasm = (function() {
     }
 
     log(pszValue) {
-      console.log(this.memoryManager.readString(pszValue))
+      console.log(this.memory.readString(pszValue))
     }
 
     setText(pszElementId, pszValue) {
-      let elementId = this.memoryManager.readString(pszElementId)
-      let value = this.memoryManager.readString(pszValue)
+      let elementId = this.memory.readString(pszElementId)
+      let value = this.memory.readString(pszValue)
 
       document.getElementById(elementId).textContent = value
     }
 
     getText(pszElementId, pszValue) {
-      let elementId = this.memoryManager.readString(pszElementId)
+      let elementId = this.memory.readString(pszElementId)
       let value = document.getElementById(elementId).textContent
 
-      this.memoryManager.writeString(pszValue, value)
+      this.memory.writeString(pszValue, value)
     }
 
     addEventListener(pszElementId, pszEvent, pfnCallback) {
       console.log("in add event listener")
-      let elementId = this.memoryManager.readString(pszElementId)
-      let event = this.memoryManager.readString(pszEvent)
+      let elementId = this.memory.readString(pszElementId)
+      let event = this.memory.readString(pszEvent)
       let element = document.getElementById(elementId)
       element.addEventListener(event, () => {
         console.log("clicked from js")
@@ -165,8 +148,28 @@ const Chiwasm = (function() {
 
   }
 
-  return { Utf8Converter, MemoryManager, ChiwasmComponent }
+  class Utf8Converter {
+    constructor() {
+      this.decoder = new TextDecoder("utf8")
+      this.encoder = new TextEncoder()
+    }
+
+    bytesToString(bytes) {
+      let index = bytes.indexOf(0)
+      let array = index === -1 ? bytes : bytes.slice(0, index)
+      return this.decoder.decode(new Uint8Array(array))
+    }
+
+    stringToBytes(string) {
+      let array = Array.from(this.encoder.encode(string))
+      array.push(0)
+      return new Uint8Array(array)
+    }
+
+  }
+
+  return { Utf8Converter, Memory, Component }
 
 })()
 
-customElements.define('x-chiwasm', Chiwasm.ChiwasmComponent)
+customElements.define('x-chiwasm', Chiwasm.Component)
