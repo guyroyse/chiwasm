@@ -99,9 +99,9 @@ const Chiwasm = (function() {
 
       imports.env = imports.env || {}
       imports.env.log = (s) => this.log(s)
-      imports.env.setText = (element, value) => this.setText(element, value)
-      imports.env.getText = (element, value) => this.getText(element, value)
-      imports.env.addEventListener = (element, event, callback) => this.addEventListener(element, event, callback)
+      imports.env.setElementTextById = (id, value) => this.setElementTextById(id, value)
+      imports.env.getElementTextById = (id, value) => this.getElementTextById(id, value)
+      imports.env.addEventListenerForId = (id, event, callback) => this.addEventListenerForId(id, event, callback)
 
       return imports
     }
@@ -121,21 +121,21 @@ const Chiwasm = (function() {
       console.log(this.memory.readString(pszValue))
     }
 
-    setText(pszElementId, pszValue) {
+    setElementTextById(pszElementId, pszValue) {
       let elementId = this.memory.readString(pszElementId)
       let value = this.memory.readString(pszValue)
 
       document.getElementById(elementId).textContent = value
     }
 
-    getText(pszElementId, pszValue) {
+    getElementTextById(pszElementId, pszValue) {
       let elementId = this.memory.readString(pszElementId)
       let value = document.getElementById(elementId).textContent
 
       this.memory.writeString(pszValue, value)
     }
 
-    addEventListener(pszElementId, pszEvent, pfnCallback) {
+    addEventListenerForId(pszElementId, pszEvent, pfnCallback) {
       console.log("in add event listener")
       let elementId = this.memory.readString(pszElementId)
       let event = this.memory.readString(pszEvent)

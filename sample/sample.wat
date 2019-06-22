@@ -1,9 +1,9 @@
 (module
 
   (import "env" "log" (func $log (param i32)))
-  (import "env" "setText" (func $setText (param i32) (param i32)))
-  (import "env" "getText" (func $getText (param i32) (param i32)))
-  (import "env" "addEventListener" (func $addEventListener (param i32) (param i32) (param i32)))
+  (import "env" "setElementTextById" (func $setText (param i32) (param i32)))
+  (import "env" "getElementTextById" (func $getText (param i32) (param i32)))
+  (import "env" "addEventListenerForId" (func $addEventListener (param i32) (param i32) (param i32)))
 
   (import "memory" "mem" (memory 1))
 
