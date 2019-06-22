@@ -1,4 +1,4 @@
-describe("Utf8Converter", () => {
+describe("Chiwasm.Utf8Converter", () => {
 
   beforeEach(() => {
     this.subject = new Chiwasm.Utf8Converter()

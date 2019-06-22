@@ -1,10 +1,8 @@
-describe("MemoryManager", () => {
+describe("Chiwasm.Memory", () => {
 
   beforeEach(() => {
-    this.memory = new WebAssembly.Memory({initial: 1})
-    this.utf8 = new Chiwasm.Utf8Converter()
-    this.subject = new Chiwasm.MemoryManager(this.memory, this.utf8)
-    this.array = new Uint8Array(this.memory.buffer)
+    this.subject = new Chiwasm.Memory(1, 'foo', 'bar')
+    this.array = new Uint8Array(this.subject.memory.buffer)
   })
 
   describe("#writeByte", () => {
@@ -66,6 +64,16 @@ describe("MemoryManager", () => {
     it("writes a string at other places in memory", () => {
       this.subject.writeString(4, "bar")
       expect(this.array.slice(4, 8)).toEqual(new Uint8Array([98, 97, 114, 0]))
+    })
+
+  })
+
+  describe("#addToImports", () => {
+
+    it("adds the memory to the imports object", () => {
+      let imports = {}
+      this.subject.addToImports(imports)
+      expect(imports.foo.bar).toBe(this.subject.memory)
     })
 
   })
