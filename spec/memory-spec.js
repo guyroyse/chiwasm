@@ -1,7 +1,7 @@
 describe("Chiwasm.Memory", () => {
 
   beforeEach(() => {
-    this.subject = new Chiwasm.Memory(1, 'foo', 'bar')
+    this.subject = new Chiwasm.Memory(4, 'foo', 'bar')
     this.array = new Uint8Array(this.subject.memory.buffer)
   })
 

@@ -95,17 +95,4 @@ describe("Chiwasm.Component", () => {
 
   })
 
-  when("connected to an element", () => {
-
-    beforeEach(() => {
-      spyOn(Chiwasm, 'Memory').and.callThrough()
-      this.subject.connectedCallback()
-    })
-
-    it("creates a Chiwasm.Memory of size, group, and name", () => {
-      expect(Chiwasm.Memory).toHaveBeenCalled()
-    })
-
-  })
-
 })
