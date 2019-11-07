@@ -5,7 +5,8 @@
   (import "env" "getElementTextById" (func $getText (param i32) (param i32)))
   (import "env" "addEventListenerForId" (func $addEventListener (param i32) (param i32) (param i32)))
 
-  (import "memory" "mem" (memory 1))
+  (memory $memory 1)
+  (export "memory" (memory $memory))
 
   (data (i32.const 0) "fizz\00buzz\00✈️\00")
   (data (i32.const 20) "theElement\00")
