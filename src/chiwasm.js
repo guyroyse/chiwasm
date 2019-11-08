@@ -25,9 +25,9 @@ const Chiwasm = (function() {
     let imports = {
       env : {
         log,
-        setElementTextById,
-        getElementTextById,
-        addEventListenerForId
+        setElementText,
+        getElementText,
+        addEventListener
       }
     }
 
@@ -36,32 +36,34 @@ const Chiwasm = (function() {
     (async () => {
       wasmModule = await WebAssembly.instantiateStreaming(fetch(path), imports)
       memory = new Memory(wasmModule.instance.exports.memory)
+      wasmModule.instance.exports.init()
     })()
 
     function log(pszValue) {
       console.log(memory.readString(pszValue))
     }
 
-    function setElementTextById(pszElementId, pszValue) {
-      let elementId = memory.readString(pszElementId)
+    function setElementText(pszSelector, pszValue) {
+      let selector = memory.readString(pszSelector)
       let value = memory.readString(pszValue)
 
-      document.getElementById(elementId).textContent = value
+      document.querySelector(selector).textContent = value
     }
 
-    function getElementTextById(pszElementId, pszValue) {
-      let elementId = memory.readString(pszElementId)
-      let value = document.getElementById(elementId).textContent
+    function getElementText(pszSelector, pszValue) {
+      let selector = memory.readString(pszSelector)
+      let value = document.querySelector(selector).textContent
 
       memory.writeString(pszValue, value)
     }
 
-    function addEventListenerForId(pszElementId, pszEvent, pfnCallback) {
+    function addEventListener(pszSelector, pszEvent, pfnCallback) {
       console.log("in add event listener")
-      console.log(memory)
-      let elementId = memory.readString(pszElementId)
+      console.log("memory", memory)
+      console.log("module", wasmModule)
+      let selector = memory.readString(pszSelector)
+      let element = document.querySelector(selector)
       let event = memory.readString(pszEvent)
-      let element = document.getElementById(elementId)
       element.addEventListener(event, () => {
         console.log("clicked from js")
         wasmModule.instance.exports.table.get(pfnCallback)()

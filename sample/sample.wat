@@ -1,26 +1,26 @@
 (module
 
   (import "env" "log" (func $log (param i32)))
-  (import "env" "setElementTextById" (func $setText (param i32) (param i32)))
-  (import "env" "getElementTextById" (func $getText (param i32) (param i32)))
-  (import "env" "addEventListenerForId" (func $addEventListener (param i32) (param i32) (param i32)))
+  (import "env" "setElementText" (func $setText (param i32) (param i32)))
+  (import "env" "getElementText" (func $getText (param i32) (param i32)))
+  (import "env" "addEventListener" (func $addEventListener (param i32) (param i32) (param i32)))
 
   (memory $memory 1)
   (export "memory" (memory $memory))
 
   (data (i32.const 0) "fizz\00buzz\00✈️\00")
-  (data (i32.const 20) "theElement\00")
-  (data (i32.const 40) "theOtherElement\00")
+  (data (i32.const 20) "#theElement\00")
+  (data (i32.const 40) "#theOtherElement\00")
   (data (i32.const 80) "clicked!\00")
-  (data (i32.const 100) "aButton\00")
+  (data (i32.const 100) "#aButton\00")
   (data (i32.const 110) "click\00")
 
   (table (export "table") 1 anyfunc)
   (elem (i32.const 0) $onClick)
 
-  (start $main)
+  (export "init" (func $init))
 
-  (func $main
+  (func $init
     (call $addEventListener (i32.const 100) (i32.const 110) (i32.const 0))
     (call $log (i32.const 0))
     (call $log (i32.const 5))
