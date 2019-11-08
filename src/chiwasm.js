@@ -10,58 +10,9 @@ const Chiwasm = (function() {
       if (path === null) {
         console.log("attribute 'wasm' required")
       } else {
-        this.module = new Module(path)
+        loadModule(path)
       }
     }
-  }
-
-  function Module(path) {
-
-    let imports = {
-      env : {
-        log,
-        setElementText,
-        getElementText,
-        addEventListener
-      }
-    }
-
-    let memory, table
-
-    (async () => {
-      let wasmModule = await WebAssembly.instantiateStreaming(fetch(path), imports)
-      memory = new Memory(wasmModule.instance.exports.memory)
-      table = new Table(wasmModule.instance.exports.table)
-      wasmModule.instance.exports.init()
-    })()
-
-    function log(pszValue) {
-      console.log(memory.readString(pszValue))
-    }
-
-    function setElementText(pszSelector, pszValue) {
-      let selector = memory.readString(pszSelector)
-      let value = memory.readString(pszValue)
-
-      document.querySelector(selector).textContent = value
-    }
-
-    function getElementText(pszSelector, pszValue) {
-      let selector = memory.readString(pszSelector)
-      let value = document.querySelector(selector).textContent
-
-      memory.writeString(pszValue, value)
-    }
-
-    function addEventListener(pszSelector, pszEvent, pfnCallback) {
-      let selector = memory.readString(pszSelector)
-      let element = document.querySelector(selector)
-      let event = memory.readString(pszEvent)
-      element.addEventListener(event, () => {
-        table.readFunction(pfnCallback)()
-      })
-    }
-
   }
 
   function Memory(wasmMemory) {
@@ -134,7 +85,49 @@ const Chiwasm = (function() {
     return { bytesToString, stringToBytes }
   }
 
-  return { Utf8Converter, Memory, Component }
+  async function loadModule(path) {
+
+    let memory, table
+
+    let imports = {
+      env : {
+
+        log : function (pszValue) {
+          console.log(memory.readString(pszValue))
+        },
+
+        setElementText : function (pszSelector, pszValue) {
+          let selector = memory.readString(pszSelector)
+          let value = memory.readString(pszValue)
+    
+          document.querySelector(selector).textContent = value
+        },
+
+        getElementText : function (pszSelector, pszValue) {
+          let selector = memory.readString(pszSelector)
+          let value = document.querySelector(selector).textContent
+    
+          memory.writeString(pszValue, value)
+        },
+
+        addEventListener : function (pszSelector, pszEvent, pfnCallback) {
+          let selector = memory.readString(pszSelector)
+          let element = document.querySelector(selector)
+          let event = memory.readString(pszEvent)
+          element.addEventListener(event, () => {
+            table.readFunction(pfnCallback)()
+          })
+        }
+      }
+    }
+
+    let wasmModule = await WebAssembly.instantiateStreaming(fetch(path), imports)
+    memory = new Memory(wasmModule.instance.exports.memory)
+    table = new Table(wasmModule.instance.exports.table)
+    wasmModule.instance.exports.init()
+  }
+
+  return { Component, Memory, Table, Utf8Converter, loadModule }
 
 })()
 
