@@ -6,18 +6,13 @@ const Chiwasm = (function() {
     }
 
     async connectedCallback() {
-      this.module = new Module(this.modulePath)
+      let path = this.getAttribute('wasm')
+      if (path === null) {
+        console.log("attribute 'wasm' required")
+      } else {
+        this.module = new Module(path)
+      }
     }
-
-    get modulePath() {
-      return this.fetchAttribute('wasm')
-    }
-
-    fetchAttribute(name, defaultValue) {
-      let value = this.getAttribute(name)
-      return value === null ? defaultValue : value
-    }
-
   }
 
   function Module(path) {
@@ -31,11 +26,12 @@ const Chiwasm = (function() {
       }
     }
 
-    let wasmModule, memory
+    let memory, table
 
     (async () => {
-      wasmModule = await WebAssembly.instantiateStreaming(fetch(path), imports)
+      let wasmModule = await WebAssembly.instantiateStreaming(fetch(path), imports)
       memory = new Memory(wasmModule.instance.exports.memory)
+      table = new Table(wasmModule.instance.exports.table)
       wasmModule.instance.exports.init()
     })()
 
@@ -58,15 +54,11 @@ const Chiwasm = (function() {
     }
 
     function addEventListener(pszSelector, pszEvent, pfnCallback) {
-      console.log("in add event listener")
-      console.log("memory", memory)
-      console.log("module", wasmModule)
       let selector = memory.readString(pszSelector)
       let element = document.querySelector(selector)
       let event = memory.readString(pszEvent)
       element.addEventListener(event, () => {
-        console.log("clicked from js")
-        wasmModule.instance.exports.table.get(pfnCallback)()
+        table.readFunction(pfnCallback)()
       })
     }
 
@@ -109,6 +101,19 @@ const Chiwasm = (function() {
     return { readByte, writeByte, readString, writeString }
   }
 
+  function Table(wasmTable) {
+
+    function readFunction(index) {
+      return wasmTable.get(index)
+    }
+
+    function writeFunction(index, func) {
+      return wasmTable.set(index, func)
+    }
+
+    return { readFunction, writeFunction }
+  }
+
   function Utf8Converter() {
 
     let decoder = new TextDecoder("utf8")
@@ -133,4 +138,4 @@ const Chiwasm = (function() {
 
 })()
 
-customElements.define('x-chiwasm', Chiwasm.Component)
+customElements.define('x-wasm', Chiwasm.Component)
